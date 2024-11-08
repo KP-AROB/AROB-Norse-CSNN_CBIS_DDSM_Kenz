@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from src.utils.dataloaders import load_mnist_dataloader
 from src.models.classification import SimpleCLSModel
 from src.utils.decoders import softmax_decoder
-from src.networks.conv import ConvNet
+from src.networks.classification import ConvNet
 from norse.torch import ConstantCurrentLIFEncoder
 from src.experiment.classification import ClassificationExperiment
 
@@ -12,10 +12,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--data_dir", type=str, default='./data')
     parser.add_argument("--input_size", type=int, default=28)
-    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--max_latency", type=int, default=50)
     parser.add_argument("--lr", type=float, default=.001)
     parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--n_classes", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
 
     model = SimpleCLSModel(
         encoder=ConstantCurrentLIFEncoder(seq_length=args.max_latency), 
-        snn=ConvNet(alpha=80), 
+        snn=ConvNet(alpha=80, n_classes = args.n_classes, feature_size=args.input_size), 
         decoder=softmax_decoder
     ).to(DEVICE)
 
