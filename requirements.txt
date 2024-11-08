@@ -1,0 +1,7 @@
+torch==2.4.1
+torchmetrics==1.5.1
+torchvision==0.19.1
+norse==1.1.0
+matplotlib
+tqdm
+numpy

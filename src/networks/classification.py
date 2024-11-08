@@ -6,7 +6,6 @@ class ConvNet(torch.nn.Module):
         super(ConvNet, self).__init__()
 
         self.features = int(((feature_size - 4) / 2 - 4) / 2)
-        print(self.features)
         self.n_classes = n_classes
         self.conv1 = torch.nn.Conv2d(num_channels, 16, 5, 1)
         self.conv2 = torch.nn.Conv2d(16, 32, 5, 1)
