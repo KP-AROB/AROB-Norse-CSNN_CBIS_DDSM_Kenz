@@ -1,7 +1,7 @@
 import torch, random, os
 import numpy as np
 from argparse import ArgumentParser
-from src.utils.dataloaders import load_mnist_dataloader
+from src.utils.dataloaders import load_mnist_dataloader, load_image_folder_dataloader
 from src.models.classification import SimpleCLSModel
 from src.utils.decoders import softmax_decoder
 from src.networks.classification import ConvNet
@@ -39,11 +39,19 @@ if __name__ == "__main__":
 
     # ========== DATALOADER ========== ##
 
-    train_dl, test_dl = load_mnist_dataloader(
-        params["data_dir"], 
-        params["input_size"], 
-        params["batch_size"], 
-        gpu)
+    if params['task'] == 'MNIST':
+        train_dl, test_dl, n_classes = load_mnist_dataloader(
+            params["data_dir"], 
+            params["input_size"], 
+            params["batch_size"], 
+            gpu)
+    else:
+        train_dl, test_dl, n_classes = load_image_folder_dataloader(
+            params["data_dir"], 
+            params["input_size"], 
+            params["batch_size"], 
+            gpu)
+
     print('# Dataloaders successfully loaded.\n')
 
     ## ========== MODEL ========== ##
@@ -52,10 +60,9 @@ if __name__ == "__main__":
 
     model = SimpleCLSModel(
         encoder=ConstantCurrentLIFEncoder(seq_length=params["max_latency"]), 
-        snn=ConvNet(alpha=80, n_classes = params["n_classes"], feature_size=params["input_size"]), 
+        snn=ConvNet(alpha=80, n_classes = n_classes, feature_size=params["input_size"]), 
         decoder=softmax_decoder
     ).to(DEVICE)
-
 
     ## ========== TRAINING ========== ##
 
