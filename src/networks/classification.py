@@ -18,8 +18,6 @@ class ConvNet(torch.nn.Module):
     def forward(self, x):
         seq_length = x.shape[0]
         batch_size = x.shape[1]
-
-        # specify the initial states
         s0 = s1 = s2 = so = None
 
         voltages = torch.zeros(

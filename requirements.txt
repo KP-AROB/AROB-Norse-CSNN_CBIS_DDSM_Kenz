@@ -5,3 +5,5 @@ norse==1.1.0
 matplotlib
 tqdm
 numpy
+pyaml
+tensorboard

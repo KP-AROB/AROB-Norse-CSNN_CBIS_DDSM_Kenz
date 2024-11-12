@@ -47,6 +47,8 @@ def load_mnist_dataloader(
         transform=transforms,
     )
 
+    print("\n# Available labels in dataset :", train_dataset.class_to_idx)
+
     train_loader = torch.utils.data.DataLoader(
         train_dataset, 
         batch_size=batch_size, 
