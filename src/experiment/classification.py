@@ -1,4 +1,4 @@
-import torch
+import torch, os
 import numpy as np
 from tqdm import tqdm, trange
 from torch.utils.tensorboard import SummaryWriter
@@ -69,6 +69,7 @@ class ClassificationExperiment(object):
             test_losses.append(test_loss)
             accuracies.append(accuracy)
 
+        torch.save(self.model.state_dict(), os.path.join(self.writer.log_dir, 'checkpoint.pth'))
         print("\n\033[32mTraining Completed.\033[0m")
         print(f"\033[32mFinal test accuracy: {accuracies[-1]}\033[0m\n")
             
