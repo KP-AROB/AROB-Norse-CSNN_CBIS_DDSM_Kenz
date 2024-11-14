@@ -1,7 +1,10 @@
 import torch, random, os
+from torchvision.transforms import v2
+from torchvision.io import decode_image
 import numpy as np
 from argparse import ArgumentParser
-from src.utils.dataloaders import load_mnist_dataloader, load_image_folder_dataloader
+#from src.utils.dataloaders import load_mnist_dataloader, load_image_folder_dataloader
+from src.utils.dataloaders_Kenza import load_mnist_dataloader, load_cbisdssm_dataloader
 from src.models.classification import SimpleCLSModel
 from src.utils.decoders import softmax_decoder
 from src.networks.classification import ConvNet
@@ -47,11 +50,12 @@ if __name__ == "__main__":
             params["batch_size"], 
             gpu)
     else:
-        train_dl, test_dl, n_classes = load_image_folder_dataloader(
+        train_dl, test_dl, n_classes = load_cbisdssm_dataloader(
             params["data_dir"], 
             params["input_size"], 
             params["batch_size"], 
-            gpu)
+            gpu) #load_image_folder_dataloader
+
 
     print('# Dataloaders successfully loaded.\n')
 

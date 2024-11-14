@@ -17,11 +17,16 @@ def load_image_folder_dataloader(
                 transforms.Grayscale(),
                 transforms.ToTensor(), 
                 transforms.Resize((image_size, image_size)),
-                transforms.Normalize((0.1307,), (0.3081,)),
+                transforms.Normalize((0.1973),(0.2510)),#this is for CBIS_DDSM #((0.1307,), (0.3081,)),#.2510 and  #maybe have to change for the
+                #transforms.RandomHorizontalFlip(p=0.1),
+                transforms.RandomVerticalFlip(p=0.1),
+                #transforms.ElasticTransform()
+                #  transforms.RandomResizedCrop(size=(224, 224), antialias=True),
+
             ]
         )
     )
-    
+
     n_classes = len(dataset.classes)
     print("\n# Available labels in dataset :", dataset.class_to_idx)
 
@@ -86,7 +91,7 @@ def load_mnist_dataloader(
         ),
     )
 
-    test_dataset =  torchvision.datasets.MNIST(
+    test_dataset = torchvision.datasets.MNIST(
         root=data_dir,
         train=False,
         download=True,

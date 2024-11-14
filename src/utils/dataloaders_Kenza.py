@@ -158,8 +158,7 @@ class CBISDDSM(Dataset):
             category = "benign"
             label = 0
         elif pathology == "benign_without_callback":
-            category = "benign" #benign_without_callback
-            label = 0 #2
+            category = "benign_without_callback" #benign
 
         if self.save_images:
             dest_path = self.save_dir / category / f"{folder_id}.jpg"
@@ -202,7 +201,7 @@ def load_cbisdssm_dataloader(
     transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize((image_size, image_size)),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        torchvision.transforms.Normalize(mean=[0.1973], std=[0.2510]),
     ])
 
     # Create dataset instances for training and testing
