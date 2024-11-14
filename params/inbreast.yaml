@@ -1,6 +1,7 @@
 name: inbreast-bi-rads
 task: INBREAST
-data_dir: "/home/nvidia/datasets/inbreast-augmented/bi-rads-cls"
+#data_dir: "/home/nvidia/datasets/inbreast-augmented/bi-rads-cls"
+data_dir: "./data/CBIS_DDSM"
 log_dir: "./logs"
 seed: 1234
 

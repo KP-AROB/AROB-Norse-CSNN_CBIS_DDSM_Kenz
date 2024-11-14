@@ -14,7 +14,7 @@ from src.utils.parameters import write_params_to_file, load_parameters
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument("--params", type=str, default='./params/mnist.yaml')
+    #parser.add_argument("--params", type=str, default='./params/mnist.yaml')
     parser.add_argument("--params", type=str, default='./params/inbreast.yaml')
     args = parser.parse_args()
     params = load_parameters(args.params)
