@@ -77,28 +77,26 @@ def load_mnist_dataloader(
 
 
 
-#path to jpeg: "C:\Users\KenzaGarreau\PycharmProjects\AROB-Norse-CSNN\data\archive\jpeg"
-#path to csv_file = "C:\Users\KenzaGarreau\PycharmProjects\AROB-Norse-CSNN\data\archive\csv\calc_case_description_train_set.csv"
-
 # Define a function to extract the part of the path you want
 def extract_id(path):
-    # Use regular expression to find the correct segment
+    # Use regular expression (re) to find the string segment we want
     match = re.search(r'\/([^\/]+)\/[^\/]+$', path)
     if match:
         return match.group(1)
     else:
-        return path  # Return the original if pattern is not found
+        return path  # Return the original path if the segment is not found
 
 class CBISDDSM(Dataset):
-    def __init__(self, data_dir, csv_file, transform=None, save_images=True):
+    def __init__(self, data_dir, csv_file, transform=None, save_images=False):
         """
         Custom Dataset class for CBIS-DDSM images.
 
         Parameters:
         ----------------
         :data_dir: Directory where the CBIS-DDSM dataset folders are located.
-        :csv_file: Path to the CSV file containing folder IDs and labels.
+        :csv_file: Path to the CSV file containing folder names and labels.
         :transform: Transformations to apply to the images.
+        :save_images: Whether or not to save the images in the CBIS_DDSM folder.
         """
         self.data_dir = Path(data_dir)
         self.transform = transform
@@ -109,33 +107,30 @@ class CBISDDSM(Dataset):
         self.labels_df['pathology'] = self.labels_df['pathology'].str.lower()
         self.labels_df['image file path'] = self.labels_df['image file path'].apply(extract_id)
         ic(self.labels_df['image file path'][0])
-        # Create a dictionary to map folder IDs to labels
+        # Create a dictionary to map folder image file path to labels
         self.labels_dict = dict(zip(self.labels_df['image file path'], self.labels_df['pathology']))
 
-        # Define the base directory for saving images
+        # Define the directory for saving images
         self.save_dir = Path("./data/CBIS_DDSM")
 
-        # Create directories for each category if saving is enabled
+        # Add directories for each class if saving is enabled
         if self.save_images:
             for category in ["malignant", "benign", "benign_without_callback"]:
                 (self.save_dir / category).mkdir(parents=True, exist_ok=True)
 
 
-        # Get list of folder paths (using folder names from 'id' column in CSV)
+        # Create a list of folder paths (using folder names from 'image file path' column in CSV)
         self.folder_paths = [self.data_dir / folder_id for folder_id in self.labels_dict.keys()]
 
     def __len__(self):
         return len(self.folder_paths)
-
+    # the method getitem is called by the dataloader
     def __getitem__(self, idx):
 
         folder_path = self.folder_paths[idx]
         folder_path = Path(
             folder_path)
-        files = os.listdir(folder_path)
-        #ic(files)
-        #if os.path.exists(folder_path):
-            #print("Path exists")
+
         # Get the first .jpeg or .jpg image in the folder
         image_files = glob.glob(f"{folder_path}/*.jpg")
 
@@ -144,12 +139,11 @@ class CBISDDSM(Dataset):
         if len(image_files) == 0:
             raise FileNotFoundError(f"No JPEG image found in folder: {folder_path}")
 
-        # Open the image
-        image = Image.open(image_files[0]).convert("RGB")
+        # open the image
+        image = Image.open(image_files[0]) #.convert("RGB")
 
-        # Extract label from the labels dictionary
+        # Assign label to the classes dictionary
         folder_id = folder_path.name  # Folder name as the ID
-        #label = 1 if self.labels_dict[folder_id] == "malignant" else 0
         pathology = self.labels_dict[folder_id]
         if pathology == "malignant":
             category = "malignant"
@@ -159,6 +153,7 @@ class CBISDDSM(Dataset):
             label = 0
         elif pathology == "benign_without_callback":
             category = "benign_without_callback" #benign
+            label = 2
 
         if self.save_images:
             dest_path = self.save_dir / category / f"{folder_id}.jpg"
@@ -176,7 +171,8 @@ def load_cbisdssm_dataloader(
         csv_file: str,
         image_size: int,
         batch_size: int = 16,
-        gpu: bool = True
+        gpu: bool = True,
+        n_classes = 3,
 ):
     """
     Retrieves the CBIS-DDSM Dataset and
@@ -185,7 +181,7 @@ def load_cbisdssm_dataloader(
     Parameters :
     ----------------
     :data_dir: Path to the CBIS-DDSM dataset folders
-    :csv_file: Path to the CSV file with folder IDs and labels
+    :csv_file: Path to the CSV file with folder "image paths" and labels
     :image_size: The input image size
     :batch_size: The batch size
     :gpu: Whether or not the GPU is used
@@ -197,21 +193,27 @@ def load_cbisdssm_dataloader(
     """
     n_workers = gpu * 4 * torch.cuda.device_count()
 
-    # Define transforms suitable for CBIS-DDSM
+    # Define list of transforms for CBIS-DDSM images
     transforms = torchvision.transforms.Compose([
         torchvision.transforms.Resize((image_size, image_size)),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.1973], std=[0.2510]),
+        # Normalisation values for CBIS_DDSM
+        torchvision.transforms.Normalize(mean= [0.2016], std=[0.2540]), #(mean=[0.1973], std=[0.2510]),
+        # Normalisation values for MNIST ((0.1307,), (0.3081,))
+        #torchvision.transforms.RandomHorizontalFlip(p=0.1),
+        #torchvision.transforms.RandomVerticalFlip(p=0.1),
+        #torchvision.transforms.ElasticTransform()
     ])
 
-    # Create dataset instances for training and testing
+    # Create dataset instances
     full_dataset = CBISDDSM(data_dir, csv_file, transform=transforms)
-
-    # Optional split between train and test
-    train_size = int(0.8 * len(full_dataset))
+    # Split between train and test
+    train_size = int(0.8 * len(full_dataset)) #Lenth of folder_paths
+    ic(train_size)
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
 
+    # Create the Dataloader, the Dataloader calls automatically the method __getitem__
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -228,4 +230,4 @@ def load_cbisdssm_dataloader(
         num_workers=n_workers
     )
 
-    return train_loader, test_loader
+    return train_loader, test_loader, n_classes

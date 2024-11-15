@@ -3,7 +3,6 @@ from torchvision.transforms import v2
 from torchvision.io import decode_image
 import numpy as np
 from argparse import ArgumentParser
-#from src.utils.dataloaders import load_mnist_dataloader, load_image_folder_dataloader
 from src.utils.dataloaders_Kenza import load_mnist_dataloader, load_cbisdssm_dataloader
 from src.models.classification import SimpleCLSModel
 from src.utils.decoders import softmax_decoder
@@ -43,18 +42,17 @@ if __name__ == "__main__":
 
     # ========== DATALOADER ========== ##
 
-    if params['task'] == 'MNIST':
-        train_dl, test_dl, n_classes = load_mnist_dataloader(
-            params["data_dir"], 
-            params["input_size"], 
-            params["batch_size"], 
-            gpu)
-    else:
-        train_dl, test_dl, n_classes = load_cbisdssm_dataloader(
-            params["data_dir"], 
-            params["input_size"], 
-            params["batch_size"], 
-            gpu) #load_image_folder_dataloader
+    path_jpeg = "./data/archive/jpeg"
+    path_csv = "./data/archive/csv/calc_case_description_test_set.csv"
+
+
+    train_dl, test_dl, n_classes = load_cbisdssm_dataloader(
+        data_dir=path_jpeg,
+        csv_file=path_csv,
+        image_size= params["input_size"],
+        batch_size=params["batch_size"],
+        gpu=torch.cuda.is_available()
+    )
 
 
     print('# Dataloaders successfully loaded.\n')
