@@ -4,6 +4,7 @@ from torchvision.io import decode_image
 import numpy as np
 from argparse import ArgumentParser
 from src.utils.dataloaders_Kenza import load_mnist_dataloader, load_cbisdssm_dataloader
+from src.utils.remove_confounder import load_cbisdssm_dataloader
 from src.models.classification import SimpleCLSModel
 from src.utils.decoders import softmax_decoder
 from src.networks.classification import ConvNet
@@ -43,7 +44,8 @@ if __name__ == "__main__":
     # ========== DATALOADER ========== ##
 
     path_jpeg = "./data/archive/jpeg"
-    path_csv = "./data/archive/csv/calc_case_description_test_set.csv"
+    #path_csv = "./data/archive/csv/calc_case_description_test_set.csv"
+    path_csv = "./data/archive/csv/calc_case_description_train_set.csv"
 
 
     train_dl, test_dl, n_classes = load_cbisdssm_dataloader(
@@ -51,7 +53,8 @@ if __name__ == "__main__":
         csv_file=path_csv,
         image_size= params["input_size"],
         batch_size=params["batch_size"],
-        gpu=torch.cuda.is_available()
+        gpu=torch.cuda.is_available(),
+        #save_images = False,
     )
 
 

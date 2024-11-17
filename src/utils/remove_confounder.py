@@ -1,22 +1,27 @@
+import pandas as pd
+import numpy as np
+from neuroCombat import neuroCombat
+
 import torch, torchvision
 from torchvision import transforms
 from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
+from src.utils.dataloaders_Kenza import load_cbisdssm_dataloader
 import pandas as pd
 import os
 import re
 from icecream import ic
 import glob
 
+
 def load_mnist_dataloader(
         data_dir: str,
         image_size: int,
-        batch_size: int = 16, 
-        gpu : bool = True):
-
+        batch_size: int = 16,
+        gpu: bool = True):
     """
-    Retrieves the MNIST Dataset and 
+    Retrieves the MNIST Dataset and
     returns torch dataloader for training and testing
 
     Parameters :
@@ -37,11 +42,11 @@ def load_mnist_dataloader(
     transforms = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Resize(image_size), 
+            torchvision.transforms.Resize(image_size),
             torchvision.transforms.Normalize((0.1307,), (0.3081,)),
         ]
     )
-    
+
     train_dataset = torchvision.datasets.MNIST(
         root=data_dir,
         train=True,
@@ -49,7 +54,7 @@ def load_mnist_dataloader(
         transform=transforms,
     )
 
-    test_dataset =  torchvision.datasets.MNIST(
+    test_dataset = torchvision.datasets.MNIST(
         root=data_dir,
         train=False,
         download=True,
@@ -57,24 +62,22 @@ def load_mnist_dataloader(
     )
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
-        shuffle=True, 
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
         pin_memory=gpu,
         num_workers=n_workers
     )
 
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, 
-        batch_size=batch_size, 
-        shuffle=False, 
-        pin_memory=gpu, 
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=gpu,
         num_workers=n_workers
     )
 
     return train_loader, test_loader
-
-
 
 
 # Define a function to extract the part of the path you want
@@ -86,7 +89,8 @@ def extract_id(path):
     else:
         return path  # Return the original path if the segment is not found
 
-class CBISDDSM(Dataset):
+
+class CBI_forCombat(Dataset):
     def __init__(self, data_dir, csv_file, transform=None, save_images=False):
         """
         Custom Dataset class for CBIS-DDSM images.
@@ -104,11 +108,18 @@ class CBISDDSM(Dataset):
 
         # Load the CSV file
         self.labels_df = pd.read_csv(csv_file)
+
+        # Extract the desired columns
+        columns_to_extract = ['image file path', 'pathology', 'left or right breast']
+        extracted_df = self.labels_df[columns_to_extract]
+        print(extracted_df)
+
         self.labels_df['pathology'] = self.labels_df['pathology'].str.lower()
         self.labels_df['image file path'] = self.labels_df['image file path'].apply(extract_id)
+        #self.labels_df['left or right breast']
         ic(self.labels_df['image file path'][0])
         # Create a dictionary to map folder image file path to labels
-        self.labels_dict = dict(zip(self.labels_df['image file path'], self.labels_df['pathology']))
+        #self.labels_dict = dict(zip(self.labels_df['image file path'], self.labels_df['pathology']))
 
         # Define the directory for saving images
         self.save_dir = Path("./data/CBIS_DDSM")
@@ -118,12 +129,14 @@ class CBISDDSM(Dataset):
             for category in ["malignant", "benign", "benign_without_callback"]:
                 (self.save_dir / category).mkdir(parents=True, exist_ok=True)
 
+        self.labels_dict = dict(zip(self.labels_df['image file path'], self.labels_df['pathology']))
 
         # Create a list of folder paths (using folder names from 'image file path' column in CSV)
         self.folder_paths = [self.data_dir / folder_id for folder_id in self.labels_dict.keys()]
 
     def __len__(self):
         return len(self.folder_paths)
+
     # the method getitem is called by the dataloader
     def __getitem__(self, idx):
 
@@ -134,13 +147,13 @@ class CBISDDSM(Dataset):
         # Get the first .jpeg or .jpg image in the folder
         image_files = glob.glob(f"{folder_path}/*.jpg")
 
-        #print(f"Folder: {folder_path}, Images found: {(image_files)}")
+        # print(f"Folder: {folder_path}, Images found: {(image_files)}")
 
         if len(image_files) == 0:
             raise FileNotFoundError(f"No JPEG image found in folder: {folder_path}")
 
         # open the image
-        image = Image.open(image_files[0]) #.convert("RGB")
+        image = Image.open(image_files[0])  # .convert("RGB")
 
         # Assign label to the classes dictionary
         folder_id = folder_path.name  # Folder name as the ID
@@ -152,7 +165,7 @@ class CBISDDSM(Dataset):
             category = "benign"
             label = 0
         elif pathology == "benign_without_callback":
-            category = "benign_without_callback" #benign
+            category = "benign_without_callback"  # benign
             label = 2
 
         if self.save_images:
@@ -166,14 +179,37 @@ class CBISDDSM(Dataset):
         return image, label
 
 
+def correction(labels_df, image_data):
+    # Reshape image
+    image_data_array = np.array([sample[0].flatten() for sample in image_data])
+    image_data_T = image_data_array.T
+    # Extract the confounder
+    confounder = labels_df['left or right breast'].values
+
+    # additional covariates to preserve
+    covars = pd.DataFrame({
+        'confounder': confounder,
+        'label': labels_df['pathology'].values,
+        'ID': labels_df['image file path'].values
+    })
+
+    # Run ComBat
+    combat_corrected = neuroCombat(
+        dat=image_data_T,
+        covars=covars,
+        batch_col='confounder')['data']
+
+    print("Corrected data shape:", combat_corrected)
+    return combat_corrected
+
+
 def load_cbisdssm_dataloader(
         data_dir: str,
         csv_file: str,
         image_size: int,
         batch_size: int = 16,
         gpu: bool = True,
-        n_classes = 3,
-        save_images = False,
+        n_classes=3,
 ):
     """
     Retrieves the CBIS-DDSM Dataset and
@@ -199,24 +235,27 @@ def load_cbisdssm_dataloader(
         torchvision.transforms.Resize((image_size, image_size)),
         torchvision.transforms.ToTensor(),
         # Normalisation values for CBIS_DDSM
-        torchvision.transforms.Normalize(mean= [0.2016], std=[0.2540]), #(mean=[0.1973], std=[0.2510]),
+        torchvision.transforms.Normalize(mean=[0.2016], std=[0.2540]),  # (mean=[0.1973], std=[0.2510]),
         # Normalisation values for MNIST ((0.1307,), (0.3081,))
-        #torchvision.transforms.RandomHorizontalFlip(p=0.1),
+        # torchvision.transforms.RandomHorizontalFlip(p=0.1),
         torchvision.transforms.RandomVerticalFlip(p=0.1),
-        #torchvision.transforms.ElasticTransform()
+        # torchvision.transforms.ElasticTransform()
     ])
 
     # Create dataset instances
-    full_dataset = CBISDDSM(data_dir, csv_file, transform=transforms, save_images=save_images)
+    full_dataset = CBI_forCombat(data_dir, csv_file, transform=transforms)
     # Split between train and test
-    train_size = int(0.8 * len(full_dataset)) #Lenth of folder_paths
+    train_size = int(0.8 * len(full_dataset))  # Lenth of folder_paths
     ic(train_size)
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
 
+    combated_train_dataset = correction(full_dataset.labels_df, train_dataset)
+    combated_test_dataset = correction(full_dataset.labels_df, test_dataset)
+
     # Create the Dataloader, the Dataloader calls automatically the method __getitem__
     train_loader = DataLoader(
-        train_dataset,
+        combated_train_dataset,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=gpu,
@@ -224,7 +263,7 @@ def load_cbisdssm_dataloader(
     )
 
     test_loader = DataLoader(
-        test_dataset,
+        combated_test_dataset,
         batch_size=batch_size,
         shuffle=False,
         pin_memory=gpu,
