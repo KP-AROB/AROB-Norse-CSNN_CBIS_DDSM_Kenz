@@ -183,10 +183,10 @@ def correction(labels_df, image_data):
     # Reshape image
     image_data_array = np.array([sample[0].flatten() for sample in image_data])
     image_data_T = image_data_array.T
-    # Extract the confounder
+    # define the confounder
     confounder = labels_df['left or right breast'].values
 
-    # additional covariates to preserve
+    # list of covariates
     covars = pd.DataFrame({
         'confounder': confounder,
         'label': labels_df['pathology'].values,
